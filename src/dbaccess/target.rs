@@ -308,7 +308,7 @@ pub async fn recover_db(
 ///
 /// some transformations' predicate is not the primary key
 /// (such as "time<2022-7-14")
-/// this function could transfer them primary key predicate
+/// this function could transfer them into primary key predicate
 /// the old transformation could be transferred into more than one new transformations
 /// the transformations of user table will be placed at the end one by one
 /// and the other tables' transformations will be placed at the front

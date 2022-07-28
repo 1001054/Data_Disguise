@@ -19,6 +19,7 @@ use crate::models::vault::{Disguise, DisguiseFromDB, Function, Vault};
 ///
 /// returns: Result<String, MyError>
 ///
+///
 pub async fn generate_vault_db(vault_db: &MySqlPool, vault: Vault) -> Result<String, MyError> {
     sqlx::query("INSERT INTO vault (vault_id, email, placeholder_info) values (?, ? , ?)")
         .bind(vault.vault_id.clone())
