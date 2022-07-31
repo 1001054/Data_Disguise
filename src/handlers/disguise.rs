@@ -213,6 +213,7 @@ pub async fn recover_disguise(
 
 #[cfg(test)]
 mod tests {
+    use std::borrow::Borrow;
     use std::env;
     use std::future::Future;
     use std::sync::Mutex;
@@ -268,10 +269,7 @@ mod tests {
             delete_name: None,
             transformations: Some(vec![decorrelate, removal]),
         };
-        //covert the requirement into json
-        // let requirement = web::Json(&requirement);
 
-        
         //the requirement of recover
         let requirement_recover = Requirement {
             disguise_name: Some("userscrub".to_string()),
@@ -280,13 +278,12 @@ mod tests {
             delete_name: None,
             transformations: None
         };
-        // let requirement_recover = web::Json(&requirement_recover);
 
         let mut i = 0;
         // test this policy repetitively
-        while i < 4 {
+        while i < 21 {
             //sleep 5s
-            std::thread::sleep(Duration::from_secs(1));
+            std::thread::sleep(Duration::from_secs(2));
 
             //start the time
             let start = Local::now();
@@ -301,6 +298,200 @@ mod tests {
             
             recover_disguise(shared_data.clone(), Json(requirement_recover.clone())).await.unwrap();
             
+            i += 1;
+        }
+
+    }
+
+    #[ignore]
+    #[actix_rt::test]
+    async fn anonymize_test() {
+
+        //load the env variables
+        dotenv().ok();
+        //build the target database using the url in the .env
+        //the target database is the database to disguise
+        let target_database_url = env::var("DATABASE_URL").expect("DATABASE_URL is not set yet.");
+        let vault_database_url = env::var("VAULT_DATABASE_URL").expect("VAULT_DATABASE_URL is not set yet.");
+        let target_db = MySqlPoolOptions::new().connect(&target_database_url).await.unwrap();
+        let vault_db = MySqlPoolOptions::new().connect(&vault_database_url).await.unwrap();
+        //put the target database pool in the state
+        let shared_data = web::Data::new(AppState {
+            vault_db,
+            target_db,
+        });
+        //create the transformations and requirement
+        let decorrelate = Transformation {
+            transform_type: Some("decorrelation".into()),
+            table_name: Some("review".into()),
+            predicate: Some("contact_id=19".into()),
+            foreign_key: Some("contact_id".into()),
+            changes: None,
+        };
+        let requirement = Requirement {
+            disguise_name: Some("anonymize".into()),
+            vault_id: Some("19".into()),
+            delete_age: None,
+            delete_name: None,
+            transformations: Some(vec![decorrelate]),
+        };
+
+        //the requirement of recover
+        let requirement_recover = Requirement {
+            disguise_name: Some("anonymize".to_string()),
+            vault_id: Some("19".to_string()),
+            delete_age: None,
+            delete_name: None,
+            transformations: None
+        };
+
+        let mut i = 0;
+        // test this policy repetitively
+        while i < 21 {
+            //sleep 5s
+            std::thread::sleep(Duration::from_secs(2));
+
+            //start the time
+            let start = Local::now();
+
+
+            let res = anonymize(shared_data.clone(), Json(requirement.clone())).await.unwrap();
+            assert_eq!(res.status(), StatusCode::OK);
+
+            //to test the time
+            let time = Local::now() - start;
+            println!("{:?}", time.num_milliseconds());
+
+            recover_disguise(shared_data.clone(), Json(requirement_recover.clone())).await.unwrap();
+
+            i += 1;
+        }
+
+    }
+
+    #[ignore]
+    #[actix_rt::test]
+    async fn expiration_test() {
+
+        //load the env variables
+        dotenv().ok();
+        //build the target database using the url in the .env
+        //the target database is the database to disguise
+        let target_database_url = env::var("DATABASE_URL").expect("DATABASE_URL is not set yet.");
+        let vault_database_url = env::var("VAULT_DATABASE_URL").expect("VAULT_DATABASE_URL is not set yet.");
+        let target_db = MySqlPoolOptions::new().connect(&target_database_url).await.unwrap();
+        let vault_db = MySqlPoolOptions::new().connect(&vault_database_url).await.unwrap();
+        //put the target database pool in the state
+        let shared_data = web::Data::new(AppState {
+            vault_db,
+            target_db,
+        });
+        //create the transformations and requirement
+        let removal1 = Transformation {
+            transform_type: Some("removal".into()),
+            table_name: Some("review".into()),
+            predicate: None,
+            foreign_key: Some("contact_id".into()),
+            changes: None,
+        };
+        let removal2 = Transformation {
+            transform_type: Some("removal".into()),
+            table_name: Some("contact_info".into()),
+            predicate: Some("last_login_time".into()),
+            foreign_key: None,
+            changes: None,
+        };
+        let requirement = Requirement {
+            disguise_name: Some("expiration".into()),
+            vault_id: Some("19".into()),
+            delete_age: Some(5),
+            delete_name: None,
+            transformations: Some(vec![removal1, removal2]),
+        };
+
+        //the requirement of recover
+        let requirement_recover = Requirement {
+            disguise_name: Some("expiration".to_string()),
+            vault_id: Some("19".to_string()),
+            delete_age: None,
+            delete_name: None,
+            transformations: None
+        };
+
+        let mut i = 0;
+        // test this policy repetitively
+        while i < 21 {
+            //sleep 5s
+            std::thread::sleep(Duration::from_secs(2));
+
+            //start the time
+            let start = Local::now();
+
+
+            let res = expiration(shared_data.clone(), Json(requirement.clone())).await.unwrap();
+            assert_eq!(res.status(), StatusCode::OK);
+
+            //to test the time
+            let time = Local::now() - start;
+            println!("{:?}", time.num_milliseconds());
+
+            recover_disguise(shared_data.clone(), Json(requirement_recover.clone())).await.unwrap();
+
+            i += 1;
+        }
+
+    }
+
+    // #[ignore]
+    #[actix_rt::test]
+    async fn clear_vault_test() {
+
+        //load the env variables
+        dotenv().ok();
+        //build the target database using the url in the .env
+        //the target database is the database to disguise
+        let target_database_url = env::var("DATABASE_URL").expect("DATABASE_URL is not set yet.");
+        let vault_database_url = env::var("VAULT_DATABASE_URL").expect("VAULT_DATABASE_URL is not set yet.");
+        let target_db = MySqlPoolOptions::new().connect(&target_database_url).await.unwrap();
+        let vault_db = MySqlPoolOptions::new().connect(&vault_database_url).await.unwrap();
+        //put the target database pool in the state
+        let shared_data = web::Data::new(AppState {
+            vault_db,
+            target_db,
+        });
+        //create the requirement
+        let requirement = Requirement {
+            disguise_name: Some("clearvault".into()),
+            vault_id: Some("19".into()),
+            delete_age: None,
+            delete_name: Some("userscrub".into()),
+            transformations: None,
+        };
+        let disguise = download_disguise_db(
+            shared_data.vault_db.borrow(),
+            "userscrub",
+            "19"
+        ).await.unwrap();
+
+        let mut i = 0;
+        // test this policy repetitively
+        while i < 5 {
+            //sleep 5s
+            std::thread::sleep(Duration::from_secs(2));
+
+            //start the time
+            let start = Local::now();
+
+
+            let res = clear_vault(shared_data.clone(), Json(requirement.clone())).await.unwrap();
+            assert_eq!(res.status(), StatusCode::OK);
+
+            //to test the time
+            let time = Local::now() - start;
+            println!("{:?}", time.num_milliseconds());
+
+            upload_disguise_object_db(shared_data.vault_db.borrow(), &disguise).await;
+
             i += 1;
         }
 

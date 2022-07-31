@@ -162,6 +162,47 @@ pub async fn download_disguise_db(
     Ok(disguise)
 }
 
+pub async fn upload_disguise_object_db(
+    vault_pool: &MySqlPool,
+    disguise: &Disguise
+) -> Result<String, MyError> {
+    let time = disguise.time.as_ref().unwrap().as_str();
+    let vault_id = disguise.vault_id.as_ref().unwrap().as_str();
+    let disguise_type = disguise.disguise_type.as_ref().unwrap().as_str();
+    let functions = disguise.functions.as_ref().unwrap().clone();
+
+    let sql = "INSERT INTO disguise (time, vault_id, disguise_type) VALUES (?, ?, ?)";
+    //insert the disguise into database
+    let disguise_id = sqlx::query(sql)
+        .bind(time)
+        .bind(vault_id)
+        .bind(disguise_type)
+        .execute(vault_pool)
+        .await?
+        .last_insert_id();
+
+    for function in functions {
+        let transform_type = function.function_type.as_ref().unwrap().as_str();
+        let table = function.table_name.as_ref().unwrap().as_str();
+        let predicate = function.predicate.as_ref().unwrap().as_str();
+        let original_values = function.original.as_ref().unwrap().as_str();
+        let updated = function.updated.as_ref().unwrap().as_str();
+
+        let sql = "INSERT INTO function (disguise_id, function_type, table_name, predicate, original, updated) VALUES(?, ?, ?, ?, ?, ?)";
+        sqlx::query(sql)
+            .bind(disguise_id)
+            .bind(transform_type)
+            .bind(table)
+            .bind(predicate)
+            .bind(original_values)
+            .bind(updated)
+            .execute(vault_pool)
+            .await?;
+    }
+
+    Ok("The disguise object has been uploaded.".to_string())
+}
+
 ///
 /// delete the disguise in the vault after recover
 ///
@@ -322,10 +363,10 @@ mod tests {
     use actix_web::web;
     use sqlx::mysql::MySqlPoolOptions;
     use dotenv::dotenv;
-    use crate::dbaccess::vault::{generate_vault_db, get_vault_by_id_db};
+    use crate::dbaccess::vault::{generate_vault_db, get_vault_by_id_db, upload_disguise_object_db};
     use crate::handlers::vault::generate_vault;
     use crate::models::placeholder::{GeneratePlaceHolder, PlaceholderInfo};
-    use crate::models::vault::{GenerateVault, Vault};
+    use crate::models::vault::{Disguise, Function, GenerateVault, Vault};
     use crate::state::AppState;
 
     #[ignore]
@@ -367,4 +408,33 @@ mod tests {
         let res = get_vault_by_id_db(&vault_db, "19").await;
         assert_eq!(res.is_ok(), true);
     }
+
+    #[ignore]
+    #[actix_rt::test]
+    async fn upload_disguise_object_db_test() {
+        //load the env variables
+        dotenv().ok();
+        let vault_database_url = env::var("VAULT_DATABASE_URL").expect("VAULT_DATABASE_URL is not set yet.");
+        let vault_db = MySqlPoolOptions::new().connect(&vault_database_url).await.unwrap();
+        let function = Function {
+            disguise_id: Some(999),
+            function_type: Some("sdf".to_string()),
+            table_name: Some("fsdf".to_string()),
+            predicate: Some("sf".to_string()),
+            original: Some("sf".to_string()),
+            updated: Some("sf".to_string())
+        };
+        let disguise = Disguise {
+            disguise_id: Some(999),
+            time: Some("1111".to_string()),
+            vault_id: Some("19".to_string()),
+            disguise_type: Some("123".to_string()),
+            functions: Some(vec![function])
+        };
+        let res = upload_disguise_object_db(&vault_db, &disguise).await;
+        println!("{:?}", res);
+        assert_eq!(res.is_ok(), true);
+    }
+
+
 }
