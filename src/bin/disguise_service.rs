@@ -48,5 +48,6 @@ async fn main() -> io::Result<()> {
             .configure(disguise_routes)
             .configure(vault_routes)
     };
+    println!("The server has been started.");
     HttpServer::new(app).bind("127.0.0.1:3000")?.run().await
 }

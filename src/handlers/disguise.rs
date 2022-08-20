@@ -24,6 +24,7 @@ pub async fn scrub_user(
     app_state: web::Data<AppState>,
     requirement: web::Json<Requirement>,
 ) -> Result<HttpResponse, MyError> {
+    println!("Request to scrub user.");
     let target_pool = &app_state.target_db;
     let vault_pool = &app_state.vault_db;
     let disguise_name = requirement.disguise_name.as_ref().unwrap().to_lowercase();
@@ -49,6 +50,7 @@ pub async fn scrub_user(
     //upload this disguise into the vault
     upload_disguise_db(vault_pool, &requirement, original, all_changes).await?;
 
+    println!("The policy has been applied.");
     Ok(HttpResponse::Ok().json("The policy has been applied.".to_string()))
 }
 
@@ -66,6 +68,7 @@ pub async fn anonymize(
     app_state: web::Data<AppState>,
     requirement: web::Json<Requirement>
 ) -> Result<HttpResponse, MyError> {
+    println!("Request to anonymize user.");
     let target_pool = &app_state.target_db;
     let vault_pool = &app_state.vault_db;
     let disguise_name = requirement.disguise_name.as_ref().unwrap().to_lowercase();
@@ -91,6 +94,7 @@ pub async fn anonymize(
     //upload this disguise into the vault
     upload_disguise_db(vault_pool, &requirement, original, all_changes).await?;
 
+    println!("The policy has been applied.");
     Ok(HttpResponse::Ok().json("The policy has been applied.".to_string()))
 }
 
@@ -109,6 +113,7 @@ pub async fn expiration(
     app_state: web::Data<AppState>,
     requirement: web::Json<Requirement>
 ) -> Result<HttpResponse, MyError> {
+    println!("Request to use expiration.");
     let target_pool = &app_state.target_db;
     let vault_pool = &app_state.vault_db;
     let disguise_name = requirement.disguise_name.as_ref().unwrap().to_lowercase();
@@ -137,6 +142,7 @@ pub async fn expiration(
     //upload this disguise into the vault
     upload_disguise_db(vault_pool, &requirement, original, all_changes).await?;
 
+    println!("The policy has been applied.");
     Ok(HttpResponse::Ok().json("The policy has been applied.".to_string()))
 }
 
@@ -155,6 +161,7 @@ pub async fn clear_vault(
     app_state: web::Data<AppState>,
     requirement: web::Json<Requirement>,
 ) -> Result<HttpResponse, MyError> {
+    println!("Request to use clear vault.");
     let target_pool = &app_state.target_db;
     let vault_pool = &app_state.vault_db;
     let age = requirement.delete_age;
@@ -176,6 +183,7 @@ pub async fn clear_vault(
             delete_disguise_by_age_db(target_pool, vault_pool, age).await?;
         }
     }
+    println!("The policy has been applied.");
     Ok(HttpResponse::Ok().json("The policy has been applied.".to_string()))
 }
 
@@ -194,6 +202,7 @@ pub async fn recover_disguise(
     app_state: web::Data<AppState>,
     requirement: web::Json<Requirement>,
 ) -> Result<HttpResponse, MyError> {
+    println!("Request to recover disguise.");
     let target_db = &app_state.target_db;
     let vault_db = &app_state.vault_db;
     let disguise_type = requirement.disguise_name.as_ref().unwrap();
@@ -208,6 +217,7 @@ pub async fn recover_disguise(
     //delete the disguise in the vault
     delete_disguise_db(vault_db, disguise_type, vault_id).await?;
 
+    println!("The disguise has been recovered.");
     Ok(HttpResponse::Ok().json("The disguise has been recovered."))
 }
 
